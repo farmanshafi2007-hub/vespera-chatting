@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DESON · Minimalist Architectural Design</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"DM Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        html {
+            width: 100%;
+            background: #000;
+            overflow-x: hidden;
+            scrollbar-width: none;
+        }
+
+        html::-webkit-scrollbar {
+            display: none;
+        }
+
+        body {
+            width: 100%;
+            background: #000;
+            color: #fff;
+            overflow-x: hidden;
+            scrollbar-width: none;
+            position: relative;
+        }
+
+        body::-webkit-scrollbar {
+            display: none;
+        }
+
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .canvas-overlay {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.65) 100%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .scroll-section {
+            position: relative;
+            z-index: 10;
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: opacity, transform;
+        }
+
+        .scroll-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .glass-card {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.02) 100%);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-backdrop {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+
+<body class="selection:bg-white selection:text-black">
+    <!-- Pinned Scroll-Driven Background Animation -->
+    <canvas id="canvas"></canvas>
+    <div class="canvas-overlay"></div>
+
+    <!-- Fixed Top Header Navigation -->
+    <header
+        class="fixed top-0 left-0 w-full z-40 px-8 sm:px-16 lg:px-24 py-6 sm:py-8 backdrop-blur-md bg-black/40 border-b border-white/10 transition-all duration-300">
+        <div class="max-w-[1280px] mx-auto flex items-center justify-between gap-8">
+            <!-- Deson Brand Logo -->
+            <a href="#hero"
+                class="inline-flex items-center gap-3.5 text-white no-underline select-none whitespace-nowrap shrink-0 group">
+                <span
+                    class="inline-block w-[32px] h-[32px] bg-white rounded-[7px] rotate-45 shrink-0 transition-transform duration-300 group-hover:rotate-90"></span>
+                <span class="text-[25px] sm:text-[27px] font-bold tracking-[0.02em] text-white uppercase leading-none">
+                    DESON
+                </span>
+            </a>
+
+            <!-- Navigation Actions -->
+            <nav class="flex items-center gap-6 sm:gap-10 lg:gap-14">
+                <button id="open-search-btn" type="button"
+                    class="text-[16px] sm:text-[18px] font-normal text-white hover:opacity-75 transition-opacity cursor-pointer bg-transparent border-0 p-0 flex items-center gap-2">
+                    <svg class="w-4 h-4 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    Search
+                </button>
+
+                <button id="open-signin-btn" type="button"
+                    class="text-[16px] sm:text-[18px] font-normal text-white hover:opacity-75 transition-opacity cursor-pointer bg-transparent border-0 p-0">
+                    <span id="nav-user-label">Sign in</span>
+                </button>
+
+                <button id="open-cart-btn" type="button"
+                    class="flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-4 py-1.5 text-[15px] sm:text-[16px] font-medium text-white hover:bg-white/20 transition-all cursor-pointer">
+                    <span>Bag</span>
+                    <span id="cart-badge"
+                        class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white text-black text-xs font-bold">0</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Scrollable Content Container -->
+    <main class="relative z-10 w-full">
+        <!-- SECTION 1: HERO BANNER (Matches Deson reference exactly) -->
+        <section id="hero"
+            class="scroll-section is-visible min-h-screen w-full flex flex-col justify-between px-8 sm:px-16 lg:px-24 pt-32 sm:pt-40 pb-16 sm:pb-24 max-w-[1280px] mx-auto select-none">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-stretch pt-4 sm:pt-8 my-auto">
+                <!-- Left Column: Display Headline at Top, Shop Now Button at Bottom -->
+                <div class="lg:col-span-7 flex flex-col justify-between items-start">
+                    <h1
+                        class="text-[44px] sm:text-[64px] lg:text-[76px] font-normal leading-[1.12] tracking-[-0.025em] text-white">
+                        <span class="block">Design is intelligence</span>
+                        <span class="block">made visible.</span>
+                    </h1>
+
+                    <div class="mt-14 lg:mt-24 sm:pl-2">
+                        <button id="hero-shop-btn" type="button"
+                            class="rounded-full bg-[#171717]/90 border border-white/20 px-12 sm:px-16 py-4.5 sm:py-5.5 text-[22px] sm:text-[26px] font-medium text-white tracking-[-0.01em] hover:bg-white hover:text-black hover:border-white transition-all whitespace-nowrap cursor-pointer shadow-2xl backdrop-blur-sm">
+                            Shop Now
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Column: Glassmorphic Features Card -->
+                <div class="lg:col-span-5 flex lg:justify-end items-end lg:pt-16">
+                    <aside aria-label="Features"
+                        class="glass-card relative w-full max-w-[390px] rounded-[28px] text-white overflow-hidden shadow-2xl">
+                        <!-- 5x7 Dot Matrix Pattern -->
+                        <div aria-hidden="true"
+                            class="pointer-events-none absolute top-8 right-6 grid grid-cols-5 gap-x-2.5 gap-y-2.5 opacity-30">
+                            <!-- 35 dots -->
+                            <span class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span>
+                            <span class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span>
+                            <span class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span>
+                            <span class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span>
+                            <span class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span>
+                            <span class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span>
+                            <span class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span><span
+                                class="block w-[2.5px] h-[2.5px] rounded-full bg-white"></span>
+                        </div>
+
+                        <!-- Top Compartment: Kicker & Title -->
+                        <div class="px-9 pt-9 pb-8">
+                            <p class="text-[13px] font-normal uppercase tracking-[0.2em] text-white/80 mb-5">
+                                FEATURES
+                            </p>
+                            <h2
+                                class="text-[42px] sm:text-[46px] font-normal leading-[1.12] tracking-[-0.015em] text-white">
+                                <span class="block">Elegant</span>
+                                <span class="block">Simplicity</span>
+                            </h2>
+                        </div>
+
+                        <!-- Horizontal Divider 1 -->
+                        <div class="border-t border-white/20 px-9 py-8">
+                            <p class="text-[18px] sm:text-[19px] font-normal leading-[1.5] text-white/90 max-w-[250px]">
+                                Experience the perfect blend of form and function with our carefully curated selection
+                                of contemporary pieces.
+                            </p>
+                        </div>
+
+                        <!-- Horizontal Divider 2 + Bottom Split Compartments -->
+                        <div aria-hidden="true" class="grid grid-cols-2 h-[120px] border-t border-white/20">
+                            <div class="border-r border-white/20 h-full bg-white/[0.02]"></div>
+                            <div class="h-full bg-white/[0.03]"></div>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+
+            <!-- Scroll Indicator Hint -->
+            <div class="w-full flex justify-center items-center pt-8 opacity-60 animate-pulse">
+                <span class="text-xs uppercase tracking-[0.25em]">Scroll to Explore</span>
+            </div>
+        </section>
+
+        <!-- SECTION 2: PHILOSOPHY & CRAFTSMANSHIP (Emerges during cloud flight) -->
+        <section id="philosophy"
+            class="scroll-section min-h-screen w-full flex items-center justify-center px-8 sm:px-16 lg:px-24 py-28 max-w-[1280px] mx-auto">
+            <div class="glass-card w-full rounded-[36px] p-10 sm:p-16 lg:p-20 shadow-2xl">
+                <div class="max-w-3xl">
+                    <p class="text-[14px] font-semibold uppercase tracking-[0.22em] text-white/70 mb-6">
+                        PHILOSOPHY
+                    </p>
+                    <h2
+                        class="text-[38px] sm:text-[54px] lg:text-[62px] font-normal leading-[1.15] tracking-[-0.02em] text-white mb-8">
+                        Form following thought, elevated beyond boundaries.
+                    </h2>
+                    <p class="text-[19px] sm:text-[22px] font-normal leading-[1.6] text-white/85 mb-14">
+                        Every piece in the DESON catalog is an architectural dialogue between raw materiality and
+                        precise silhouette. Crafted for living spaces where silence and proportion speak louder than
+                        ornamentation.
+                    </p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8 border-t border-white/20">
+                        <div>
+                            <p class="text-3xl sm:text-4xl font-light text-white mb-2">100%</p>
+                            <p class="text-sm text-white/70">Sustainably harvested European smoked oak</p>
+                        </div>
+                        <div>
+                            <p class="text-3xl sm:text-4xl font-light text-white mb-2">Hand-blown</p>
+                            <p class="text-sm text-white/70">Frosted opal spheres crafted by master artisans</p>
+                        </div>
+                        <div>
+                            <p class="text-3xl sm:text-4xl font-light text-white mb-2">Carbon Matte</p>
+                            <p class="text-sm text-white/70">Architectural spun-aluminum & aged brass</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: CURATED CONTEMPORARY COLLECTION (As Eiffel Tower emerges) -->
+        <section id="collection"
+            class="scroll-section min-h-screen w-full flex flex-col justify-center px-8 sm:px-16 lg:px-24 py-28 max-w-[1280px] mx-auto">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
+                <div>
+                    <p class="text-[13px] font-semibold uppercase tracking-[0.22em] text-white/70 mb-3">
+                        CURATED PIECES
+                    </p>
+                    <h2 class="text-[38px] sm:text-[50px] font-normal leading-tight tracking-[-0.02em] text-white">
+                        Contemporary Collection
+                    </h2>
+                </div>
+                <button id="view-full-bag-btn" type="button"
+                    class="rounded-full border border-white/25 px-6 py-2.5 text-sm font-medium text-white hover:bg-white hover:text-black transition-all cursor-pointer self-start sm:self-auto">
+                    View Selected Pieces
+                </button>
+            </div>
+
+            <!-- Grid of pieces from bannerData.ts -->
+            <div id="catalog-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Rendered dynamically from CURATED_PIECES -->
+            </div>
+        </section>
+
+        <!-- SECTION 4: SUMMIT CTA & ARCHITECTURAL FOOTER -->
+        <section id="footer"
+            class="scroll-section min-h-screen w-full flex flex-col justify-between px-8 sm:px-16 lg:px-24 pt-28 pb-14 max-w-[1280px] mx-auto">
+            <div class="glass-card w-full rounded-[36px] p-12 sm:p-20 text-center my-auto flex flex-col items-center">
+                <span class="inline-block w-[40px] h-[40px] bg-white rounded-[9px] rotate-45 mb-8"></span>
+                <p class="text-xs uppercase tracking-[0.25em] text-white/70 mb-4">ELEVATE YOUR SPACE</p>
+                <h2
+                    class="text-[42px] sm:text-[60px] font-normal tracking-[-0.02em] text-white max-w-2xl mb-8 leading-tight">
+                    Experience the pinnacle of minimalist architecture.
+                </h2>
+                <button id="footer-shop-btn" type="button"
+                    class="rounded-full bg-white text-black px-12 sm:px-16 py-4.5 sm:py-5 text-xl font-medium tracking-tight hover:bg-white/90 transition-all cursor-pointer shadow-2xl">
+                    Explore All Pieces
+                </button>
+            </div>
+
+            <!-- Footer Bar -->
+            <footer
+                class="pt-12 border-t border-white/15 flex flex-col sm:flex-row items-center justify-between gap-6 text-sm text-white/60">
+                <div class="flex items-center gap-3">
+                    <span class="font-bold tracking-widest text-white uppercase">DESON</span>
+                    <span>© 2026 DESON Architectural Living. All rights reserved.</span>
+                </div>
+                <div class="flex items-center gap-6">
+                    <a href="#hero" class="hover:text-white transition-colors">Back to top ↑</a>
+                </div>
+            </footer>
+        </section>
+    </main>
+
+    <!-- MODAL 1: SEARCH MODAL -->
+    <div id="search-modal" role="dialog" aria-modal="true"
+        class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6 hidden">
+        <div class="w-full max-w-xl rounded-[24px] border border-white/25 bg-[#0a0a0a] p-8 text-white shadow-2xl">
+            <div class="flex items-center justify-between gap-4 mb-6">
+                <h2 class="text-2xl font-medium text-white">Search Collection</h2>
+                <button id="close-search-btn" type="button"
+                    class="px-4 py-1.5 rounded-full border border-white/20 text-sm text-white hover:bg-white/10 transition-colors cursor-pointer">
+                    Close
+                </button>
+            </div>
+
+            <div class="mb-6">
+                <input id="search-input" type="search" placeholder="Search by piece, material, or category..."
+                    class="w-full rounded-xl border border-white/25 bg-black px-4 py-3 text-base text-white placeholder:text-white/50 focus:outline-none focus:border-white" />
+            </div>
+
+            <div id="search-results" class="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                <!-- Injected via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: SIGN IN MODAL -->
+    <div id="signin-modal" role="dialog" aria-modal="true"
+        class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6 hidden">
+        <div class="w-full max-w-md rounded-[24px] border border-white/25 bg-[#0a0a0a] p-8 text-white shadow-2xl">
+            <div class="flex items-center justify-between gap-4 mb-6">
+                <h2 id="signin-title" class="text-2xl font-medium text-white">Sign in</h2>
+                <button id="close-signin-btn" type="button"
+                    class="px-4 py-1.5 rounded-full border border-white/20 text-sm text-white hover:bg-white/10 transition-colors cursor-pointer">
+                    Close
+                </button>
+            </div>
+
+            <div id="signin-view">
+                <form id="signin-form" class="space-y-4">
+                    <div>
+                        <label for="signin-email" class="block text-sm text-white mb-1.5">Email Address</label>
+                        <input id="signin-email" type="email" placeholder="client@deson.com"
+                            class="w-full rounded-xl border border-white/25 bg-black px-4 py-3 text-base text-white placeholder:text-white/50 focus:outline-none focus:border-white" />
+                    </div>
+
+                    <div>
+                        <label for="signin-password" class="block text-sm text-white mb-1.5">Password</label>
+                        <input id="signin-password" type="password" placeholder="••••••"
+                            class="w-full rounded-xl border border-white/25 bg-black px-4 py-3 text-base text-white placeholder:text-white/50 focus:outline-none focus:border-white" />
+                    </div>
+
+                    <p id="signin-error"
+                        class="text-sm text-white border border-white/30 rounded-lg px-3 py-2 bg-white/5 hidden"></p>
+
+                    <button type="submit"
+                        class="w-full rounded-full bg-white py-3.5 text-base font-medium text-black hover:bg-white/90 transition-colors cursor-pointer mt-2">
+                        Continue
+                    </button>
+                </form>
+            </div>
+
+            <div id="account-view" class="space-y-6 hidden">
+                <p class="text-base text-white">Signed in as <span id="account-email" class="font-semibold"></span></p>
+                <button id="signout-btn" type="button"
+                    class="w-full rounded-full border border-white/25 bg-white/10 py-3 text-sm font-medium text-white hover:bg-white hover:text-black transition-colors cursor-pointer">
+                    Sign out
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: SHOP / BAG MODAL -->
+    <div id="shop-modal" role="dialog" aria-modal="true"
+        class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-6 hidden">
+        <div class="w-full max-w-2xl rounded-[24px] border border-white/25 bg-[#0a0a0a] p-8 text-white shadow-2xl">
+            <div class="flex items-center justify-between gap-4 mb-6">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.18em] text-white mb-1">DESON COLLECTION</p>
+                    <h2 id="shop-modal-title" class="text-2xl font-medium text-white">Curated Selection</h2>
+                </div>
+                <button id="close-shop-btn" type="button"
+                    class="px-4 py-1.5 rounded-full border border-white/20 text-sm text-white hover:bg-white/10 transition-colors cursor-pointer">
+                    Close
+                </button>
+            </div>
+
+            <div id="shop-items-container" class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                <!-- Rendered dynamically -->
+            </div>
+
+            <div class="mt-6 pt-5 border-t border-white/15 flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-white/60">Estimated Total</p>
+                    <p id="shop-total" class="text-2xl font-bold text-white">$0</p>
+                </div>
+                <button id="checkout-btn" type="button"
+                    class="rounded-full bg-white text-black px-8 py-3 text-base font-medium hover:bg-white/90 transition-all cursor-pointer">
+                    Place Order
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APPLICATION LOGIC -->
+    <script>
+            (function () {
+                // 1. DATA (from bannerData.ts)
+                const CURATED_PIECES = [
+                    {
+                        id: 'nordic-2-seater',
+                        name: 'Oslo Bouclé Two-Seater Sofa',
+                        category: 'Seating',
+                        dimensions: '178 × 86 × 74 cm',
+                        price: 2450,
+                        description: 'Sculpted low-profile silhouette with solid smoked oak legs and tactile oatmeal upholstery.'
+                    },
+                    {
+                        id: 'matte-dome-pendant',
+                        name: 'Atelier Matte Spun Pendant',
+                        category: 'Lighting',
+                        dimensions: 'Ø 42 × 28 cm',
+                        price: 580,
+                        description: 'Architectural spun-aluminum dome finished in carbon matte with warm diffused downward illumination.'
+                    },
+                    {
+                        id: 'brass-opal-lamp',
+                        name: 'Arc Opal Glass Floor Lamp',
+                        category: 'Lighting',
+                        dimensions: '34 × 24 × 142 cm',
+                        price: 790,
+                        description: 'Slender aged-brass stem curving into a hand-blown frosted glass sphere.'
+                    },
+                    {
+                        id: 'monolith-low-table',
+                        name: 'Monolith Circular Coffee Table',
+                        category: 'Tables',
+                        dimensions: 'Ø 85 × 36 cm',
+                        price: 1120,
+                        description: 'Charcoal stained ash tabletop resting on a minimalist powder-coated steel ring frame.'
+                    },
+                    {
+                        id: 'sculpted-oak-lounge',
+                        name: 'Kova Solid Oak Lounge Chair',
+                        category: 'Seating',
+                        dimensions: '72 × 76 × 71 cm',
+                        price: 1680,
+                        description: 'Cantilevered armrests and curved backrest crafted from sustainably harvested European oak.'
+                    }
+                ];
+
+                // STATE
+                let selectedPieces = [];
+                let signedInUser = null;
+
+                // 2. SMOOTH SCROLL FRAME ANIMATION ENGINE
+                const TOTAL_FRAMES = 238;
+                const frameFiles = [];
+                for (let i = 1; i <= TOTAL_FRAMES; i++) {
+                    frameFiles.push('ezgif-frame-' + String(i).padStart(3, '0') + '.jpg');
+                }
+
+                const canvas = document.getElementById('canvas');
+                const ctx = canvas.getContext('2d', { alpha: false });
+
+                const images = new Array(TOTAL_FRAMES);
+                const loaded = new Array(TOTAL_FRAMES).fill(false);
+                let targetFraction = 0;
+                let currentFraction = 0;
+                let lastRenderedImage = null;
+
+                function preloadIndex(i) {
+                    if (images[i]) return;
+                    const img = new Image();
+                    images[i] = img;
+                    img.src = frameFiles[i];
+                    img.onload = function () {
+                        loaded[i] = true;
+                        if (img.decode) {
+                            img.decode().catch(function () { }).then(function () {
+                                const curIndex = Math.min(
+                                    TOTAL_FRAMES - 1,
+                                    Math.max(0, Math.round(currentFraction * (TOTAL_FRAMES - 1)))
+                                );
+                                if (i === curIndex || !lastRenderedImage) {
+                                    render();
+                                }
+                            });
+                        } else {
+                            const curIndex = Math.min(
+                                TOTAL_FRAMES - 1,
+                                Math.max(0, Math.round(currentFraction * (TOTAL_FRAMES - 1)))
+                            );
+                            if (i === curIndex || !lastRenderedImage) {
+                                render();
+                            }
+                        }
+                    };
+                }
+
+                function resize() {
+                    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                    const w = window.innerWidth;
+                    const h = window.innerHeight;
+                    canvas.width = Math.round(w * dpr);
+                    canvas.height = Math.round(h * dpr);
+                    canvas.style.width = w + 'px';
+                    canvas.style.height = h + 'px';
+                    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    lastRenderedImage = null;
+                    render();
+                }
+
+                function getBestFrame(idx) {
+                    if (loaded[idx] && images[idx] && images[idx].naturalWidth > 0) {
+                        return images[idx];
+                    }
+                    for (let offset = 1; offset < TOTAL_FRAMES; offset++) {
+                        const prev = idx - offset;
+                        if (prev >= 0 && loaded[prev] && images[prev] && images[prev].naturalWidth > 0) {
+                            return images[prev];
+                        }
+                        const next = idx + offset;
+                        if (next < TOTAL_FRAMES && loaded[next] && images[next] && images[next].naturalWidth > 0) {
+                            return images[next];
+                        }
+                    }
+                    return (images[0] && images[0].naturalWidth > 0) ? images[0] : null;
+                }
+
+                function drawCover(img) {
+                    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+                    const w = window.innerWidth;
+                    const h = window.innerHeight;
+                    const nw = img.naturalWidth;
+                    const nh = img.naturalHeight;
+
+                    const scale = Math.max(w / nw, h / nh);
+                    const dw = nw * scale;
+                    const dh = nh * scale;
+                    const dx = (w - dw) / 2;
+                    const dy = (h - dh) / 2;
+
+                    ctx.drawImage(img, dx, dy, dw, dh);
+                }
+
+                function render() {
+                    const frameIndex = Math.min(
+                        TOTAL_FRAMES - 1,
+                        Math.max(0, Math.round(currentFraction * (TOTAL_FRAMES - 1)))
+                    );
+
+                    const img = getBestFrame(frameIndex);
+                    if (img && (img !== lastRenderedImage || !lastRenderedImage)) {
+                        drawCover(img);
+                        lastRenderedImage = img;
+                    }
+                }
+
+                function updateScroll() {
+                    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+                    targetFraction = maxScroll > 0 ? Math.max(0, Math.min(1, window.scrollY / maxScroll)) : 0;
+
+                    // Prioritize frames around current target
+                    const center = Math.round(targetFraction * (TOTAL_FRAMES - 1));
+                    for (let o = -8; o <= 8; o++) {
+                        const idx = center + o;
+                        if (idx >= 0 && idx < TOTAL_FRAMES) {
+                            preloadIndex(idx);
+                        }
+                    }
+                }
+
+                const LERP_FACTOR = 0.08;
+                function tick() {
+                    const diff = targetFraction - currentFraction;
+                    if (Math.abs(diff) > 0.00005) {
+                        currentFraction += diff * LERP_FACTOR;
+                        render();
+                    } else if (currentFraction !== targetFraction) {
+                        currentFraction = targetFraction;
+                        render();
+                    }
+                    requestAnimationFrame(tick);
+                }
+
+                // Initialize all frames
+                preloadIndex(0);
+                for (let i = 0; i < TOTAL_FRAMES; i++) {
+                    preloadIndex(i);
+                }
+
+                window.addEventListener('scroll', updateScroll, { passive: true });
+                window.addEventListener('resize', resize, { passive: true });
+                resize();
+                updateScroll();
+                requestAnimationFrame(tick);
+
+                // 3. SMOOTH SECTION REVEAL OBSERVER
+                const sections = document.querySelectorAll('.scroll-section');
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-visible');
+                        }
+                    });
+                }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+                sections.forEach((sec) => observer.observe(sec));
+
+                // 4. CATALOG CARDS RENDERING
+                const catalogGrid = document.getElementById('catalog-grid');
+                function renderCatalogCards() {
+                    catalogGrid.innerHTML = CURATED_PIECES.map((piece) => {
+                        const isAdded = selectedPieces.some(p => p.id === piece.id);
+                        return `
+            <div class="glass-card rounded-[28px] p-8 flex flex-col justify-between transition-all duration-300 hover:border-white/40 hover:-translate-y-1">
+              <div>
+                <div class="flex items-center justify-between text-xs text-white/70 mb-3">
+                  <span class="uppercase tracking-wider font-semibold">${piece.category}</span>
+                  <span>${piece.dimensions}</span>
+                </div>
+                <h3 class="text-2xl font-normal text-white mb-2 leading-snug">${piece.name}</h3>
+                <p class="text-sm text-white/80 leading-relaxed mb-6">${piece.description}</p>
+              </div>
+
+              <div class="flex items-center justify-between pt-6 border-t border-white/15">
+                <span class="text-xl font-light tabular-nums text-white">$${piece.price.toLocaleString()}</span>
+                <button
+                  type="button"
+                  onclick="window.togglePiece('${piece.id}')"
+                  class="rounded-full px-5 py-2 text-sm font-medium transition-all cursor-pointer ${isAdded
+                                ? 'bg-white text-black'
+                                : 'border border-white/25 text-white hover:bg-white/15'
+                            }"
+                >
+                  ${isAdded ? '✓ Selected' : '+ Add Piece'}
+                </button>
+              </div>
+            </div>
+          `;
+                    }).join('');
+                }
+
+                window.togglePiece = function (id) {
+                    const piece = CURATED_PIECES.find(p => p.id === id);
+                    if (!piece) return;
+                    const exists = selectedPieces.some(p => p.id === id);
+                    if (exists) {
+                        selectedPieces = selectedPieces.filter(p => p.id !== id);
+                    } else {
+                        selectedPieces.push(piece);
+                    }
+                    updateCartState();
+                    renderCatalogCards();
+                    renderShopModal();
+                };
+
+                function updateCartState() {
+                    const count = selectedPieces.length;
+                    document.getElementById('cart-badge').textContent = count;
+                    document.getElementById('shop-modal-title').textContent = `Curated Selection (${count})`;
+                }
+
+                // 5. MODALS LOGIC
+                const searchModal = document.getElementById('search-modal');
+                const signinModal = document.getElementById('signin-modal');
+                const shopModal = document.getElementById('shop-modal');
+
+                function openModal(modal) {
+                    modal.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                }
+                function closeModal(modal) {
+                    modal.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+
+                // Search Modal Handlers
+                document.getElementById('open-search-btn').addEventListener('click', () => {
+                    openModal(searchModal);
+                    document.getElementById('search-input').focus();
+                    renderSearchResults('');
+                });
+                document.getElementById('close-search-btn').addEventListener('click', () => closeModal(searchModal));
+
+                const searchInput = document.getElementById('search-input');
+                const searchResults = document.getElementById('search-results');
+
+                function renderSearchResults(query) {
+                    const q = query.trim().toLowerCase();
+                    const filtered = q === ''
+                        ? CURATED_PIECES
+                        : CURATED_PIECES.filter(p =>
+                            p.name.toLowerCase().includes(q) ||
+                            p.category.toLowerCase().includes(q) ||
+                            p.description.toLowerCase().includes(q)
+                        );
+
+                    if (filtered.length === 0) {
+                        searchResults.innerHTML = `<p class="text-sm text-white/70 py-6 text-center">No matching pieces found for "${query}".</p>`;
+                        return;
+                    }
+
+                    searchResults.innerHTML = filtered.map(item => `
+          <div class="flex items-center justify-between gap-4 rounded-xl border border-white/15 bg-white/[0.03] p-4 hover:bg-white/[0.07] transition-colors">
+            <div>
+              <p class="text-base font-medium text-white">${item.name}</p>
+              <p class="text-xs text-white/70 mt-0.5">${item.category} · ${item.dimensions}</p>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+              <span class="text-sm font-medium tabular-nums text-white">$${item.price.toLocaleString()}</span>
+              <button
+                type="button"
+                onclick="window.selectAndOpenShop('${item.id}')"
+                class="px-3.5 py-1.5 rounded-full border border-white/25 text-xs font-medium text-white hover:bg-white hover:text-black transition-colors cursor-pointer"
+              >
+                Select
+              </button>
+            </div>
+          </div>
+        `).join('');
+                }
+
+                searchInput.addEventListener('input', (e) => renderSearchResults(e.target.value));
+
+                window.selectAndOpenShop = function (id) {
+                    const piece = CURATED_PIECES.find(p => p.id === id);
+                    if (piece && !selectedPieces.some(p => p.id === id)) {
+                        selectedPieces.push(piece);
+                        updateCartState();
+                        renderCatalogCards();
+                    }
+                    closeModal(searchModal);
+                    openModal(shopModal);
+                    renderShopModal();
+                };
+
+                // Sign In Modal Handlers
+                document.getElementById('open-signin-btn').addEventListener('click', () => openModal(signinModal));
+                document.getElementById('close-signin-btn').addEventListener('click', () => closeModal(signinModal));
+
+                const signinForm = document.getElementById('signin-form');
+                const signinError = document.getElementById('signin-error');
+                const signinView = document.getElementById('signin-view');
+                const accountView = document.getElementById('account-view');
+                const navUserLabel = document.getElementById('nav-user-label');
+                const accountEmail = document.getElementById('account-email');
+                const signoutBtn = document.getElementById('signout-btn');
+
+                signinForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('signin-email').value.trim();
+                    const password = document.getElementById('signin-password').value;
+
+                    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                        signinError.textContent = 'Please enter a valid email address.';
+                        signinError.classList.remove('hidden');
+                        return;
+                    }
+                    if (!password || password.length < 6) {
+                        signinError.textContent = 'Password must be at least 6 characters.';
+                        signinError.classList.remove('hidden');
+                        return;
+                    }
+
+                    signinError.classList.add('hidden');
+                    signedInUser = email;
+                    accountEmail.textContent = email;
+                    navUserLabel.textContent = email.split('@')[0];
+                    signinView.classList.add('hidden');
+                    accountView.classList.remove('hidden');
+                    closeModal(signinModal);
+                });
+
+                signoutBtn.addEventListener('click', () => {
+                    signedInUser = null;
+                    navUserLabel.textContent = 'Sign in';
+                    document.getElementById('signin-email').value = '';
+                    document.getElementById('signin-password').value = '';
+                    signinView.classList.remove('hidden');
+                    accountView.classList.add('hidden');
+                    closeModal(signinModal);
+                });
+
+                // Shop Modal Handlers
+                document.getElementById('open-cart-btn').addEventListener('click', () => {
+                    renderShopModal();
+                    openModal(shopModal);
+                });
+                document.getElementById('hero-shop-btn').addEventListener('click', () => {
+                    renderShopModal();
+                    openModal(shopModal);
+                });
+                document.getElementById('view-full-bag-btn').addEventListener('click', () => {
+                    renderShopModal();
+                    openModal(shopModal);
+                });
+                document.getElementById('footer-shop-btn').addEventListener('click', () => {
+                    renderShopModal();
+                    openModal(shopModal);
+                });
+                document.getElementById('close-shop-btn').addEventListener('click', () => closeModal(shopModal));
+
+                function renderShopModal() {
+                    const container = document.getElementById('shop-items-container');
+                    const totalElem = document.getElementById('shop-total');
+
+                    if (selectedPieces.length === 0) {
+                        container.innerHTML = `
+            <div class="py-12 text-center text-white/60 space-y-3">
+              <p class="text-lg">Your bag is currently empty.</p>
+              <p class="text-sm">Browse the catalog pieces below to add items to your curated selection.</p>
+            </div>
+          `;
+                        totalElem.textContent = '$0';
+                        return;
+                    }
+
+                    const total = selectedPieces.reduce((sum, p) => sum + p.price, 0);
+                    totalElem.textContent = `$${total.toLocaleString()}`;
+
+                    container.innerHTML = selectedPieces.map(piece => `
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-white/15 bg-white/[0.03] p-5">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2 text-xs text-white/70">
+                <span>${piece.category}</span>
+                <span>·</span>
+                <span>${piece.dimensions}</span>
+              </div>
+              <h3 class="text-lg font-medium text-white">${piece.name}</h3>
+              <p class="text-sm text-white/80 leading-relaxed">${piece.description}</p>
+            </div>
+            <div class="flex items-center gap-4 shrink-0">
+              <span class="text-base font-medium tabular-nums text-white">$${piece.price.toLocaleString()}</span>
+              <button
+                type="button"
+                onclick="window.togglePiece('${piece.id}')"
+                class="px-4 py-1.5 rounded-full text-xs font-medium border border-white/20 text-white/80 hover:bg-white hover:text-black transition-colors cursor-pointer"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        `).join('');
+                }
+
+                document.getElementById('checkout-btn').addEventListener('click', () => {
+                    if (selectedPieces.length === 0) {
+                        alert('Please select at least one piece to place an order.');
+                        return;
+                    }
+                    alert('Thank you! Your order request for ' + selectedPieces.length + ' piece(s) has been submitted to DESON Studio.');
+                    selectedPieces = [];
+                    updateCartState();
+                    renderCatalogCards();
+                    renderShopModal();
+                    closeModal(shopModal);
+                });
+
+                // Close modals on clicking backdrop
+                [searchModal, signinModal, shopModal].forEach(modal => {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            closeModal(modal);
+                        }
+                    });
+                });
+
+                // Initial Catalog Render
+                renderCatalogCards();
+                updateCartState();
+            })();
+    </script>
+</body>
+
+</html>
